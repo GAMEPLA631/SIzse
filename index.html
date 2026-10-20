@@ -3,18 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Fortnite: Snake Royale - Cloud Account Edition</title>
+    <title>Fortnite: Snake Royale 50-Player Arena (EMQX Cloud)</title>
     <!-- Paho MQTT cez CDN -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Luckiest+Guy&family=Montserrat:ital,wght@0,600;0,800;0,900;1,900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Luckiest+Guy&family=Montserrat:ital,wght@0,700;0,800;0,900;1,900&display=swap');
 
         :root {
             --fn-yellow: #ffe600;
-            --fn-blue: #00a8ff;
-            --fn-purple: #9d4edd;
-            --fn-dark: #0e1322;
-            --fn-panel: rgba(18, 25, 44, 0.95);
+            --fn-blue: #00d2ff;
+            --fn-purple: #a855f7;
+            --fn-dark: #090d16;
+            --fn-panel: rgba(14, 20, 36, 0.92);
             --vip-gold: #f59e0b;
         }
 
@@ -43,7 +43,7 @@
             display: block;
         }
 
-        /* EPIC PROFILE BAR (Hore vpravo) */
+        /* HORNÝ PROFILOVÝ STATUS */
         .user-top-badge {
             position: absolute;
             top: 15px;
@@ -54,31 +54,17 @@
             background: var(--fn-panel);
             padding: 8px 16px;
             border-radius: 40px;
-            border: 2px solid rgba(255, 230, 0, 0.3);
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6);
+            border: 2px solid rgba(255, 230, 0, 0.35);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
             z-index: 30;
         }
 
         .avatar-img {
-            width: 36px;
-            height: 36px;
+            width: 38px;
+            height: 38px;
             border-radius: 50%;
             object-fit: cover;
             border: 2px solid var(--fn-yellow);
-        }
-
-        .user-meta {
-            display: flex;
-            flex-direction: column;
-            text-align: left;
-        }
-
-        .user-name-txt {
-            font-size: 13px;
-            font-weight: 900;
-            display: flex;
-            align-items: center;
-            gap: 5px;
         }
 
         .badge-vip {
@@ -99,7 +85,7 @@
             border-radius: 4px;
         }
 
-        /* FORTNITE HUD TOP */
+        /* FORTNITE BATTLE ROYALE HUD */
         .hud-center {
             position: absolute;
             top: 15px;
@@ -107,9 +93,9 @@
             transform: translateX(-50%);
             display: flex;
             align-items: center;
-            gap: 25px;
+            gap: 24px;
             background: var(--fn-panel);
-            padding: 10px 24px;
+            padding: 10px 26px;
             border-radius: 35px;
             border: 2px solid var(--fn-yellow);
             box-shadow: 0 0 25px rgba(255, 230, 0, 0.25);
@@ -137,7 +123,7 @@
             text-shadow: 2px 2px 0 #000;
         }
 
-        /* HEALTH & SHIELD */
+        /* SHIELD & HP */
         .hud-bottom-left {
             position: absolute;
             bottom: 25px;
@@ -146,14 +132,14 @@
             flex-direction: column;
             gap: 8px;
             z-index: 20;
-            background: rgba(14, 19, 34, 0.85);
+            background: rgba(14, 20, 36, 0.88);
             padding: 12px 18px;
             border-radius: 12px;
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         .bar-wrap {
-            width: 200px;
+            width: 220px;
             height: 14px;
             background: #1e293b;
             border-radius: 6px;
@@ -182,7 +168,7 @@
         }
 
         .kill-row {
-            background: rgba(0, 0, 0, 0.7);
+            background: rgba(0, 0, 0, 0.75);
             padding: 6px 12px;
             border-radius: 6px;
             font-size: 11px;
@@ -191,11 +177,11 @@
             animation: fadeOut 5s forwards;
         }
 
-        /* EPIC / FORTNITE LOGIN MODAL */
+        /* MODÁL: PRIHLÁSENIE / VEREJNÝ REGISTER ÚČTOV */
         .modal-screen {
             position: absolute;
             inset: 0;
-            background: rgba(6, 9, 18, 0.94);
+            background: rgba(6, 9, 18, 0.95);
             backdrop-filter: blur(10px);
             display: flex;
             align-items: center;
@@ -203,47 +189,51 @@
             z-index: 100;
         }
 
-        .epic-auth-box {
+        .lobby-box {
             background: #131a2e;
             border: 3px solid var(--fn-yellow);
             border-radius: 20px;
-            width: 480px;
+            width: 780px;
             max-width: 95vw;
-            padding: 30px;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
             box-shadow: 0 0 50px rgba(255, 230, 0, 0.25);
+            overflow: hidden;
+        }
+
+        .lobby-header {
+            padding: 20px;
+            background: #0d1424;
+            border-bottom: 2px solid #233152;
             text-align: center;
         }
 
-        .epic-auth-box h1 {
+        .lobby-header h1 {
             font-family: 'Luckiest Guy', cursive;
-            font-size: 36px;
+            font-size: 34px;
             color: var(--fn-yellow);
-            margin-bottom: 15px;
             text-shadow: 3px 3px 0 #000;
         }
 
-        .tab-btn-row {
+        .lobby-content {
             display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-
-        .tab-btn {
             flex: 1;
-            padding: 10px;
-            background: #1e293b;
-            border: none;
-            color: #94a3b8;
-            font-weight: 900;
-            font-size: 12px;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: .2s;
+            overflow: hidden;
         }
 
-        .tab-btn.active {
-            background: var(--fn-yellow);
-            color: #000;
+        .lobby-left {
+            flex: 1;
+            padding: 24px;
+            border-right: 2px solid #233152;
+            overflow-y: auto;
+        }
+
+        .lobby-right {
+            flex: 1.2;
+            padding: 24px;
+            background: #0f172a;
+            overflow-y: auto;
         }
 
         .f-input {
@@ -251,61 +241,76 @@
             background: #0a0f1d;
             border: 2px solid #334155;
             color: #fff;
-            padding: 12px;
+            padding: 10px 12px;
             border-radius: 8px;
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 700;
             outline: none;
             margin-bottom: 12px;
-            box-sizing: border-box;
         }
 
-        .f-input:focus {
-            border-color: var(--fn-yellow);
-        }
+        .f-input:focus { border-color: var(--fn-yellow); }
 
         .btn-yellow {
             width: 100%;
             background: var(--fn-yellow);
             color: #000;
             font-family: 'Luckiest Guy', cursive;
-            font-size: 22px;
-            padding: 14px;
+            font-size: 20px;
+            padding: 12px;
             border-radius: 10px;
             border: none;
             cursor: pointer;
             box-shadow: 0 5px 0 #b3a100;
             transition: .1s;
-            margin-top: 5px;
         }
 
-        .btn-yellow:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 7px 0 #b3a100;
+        .btn-yellow:hover { transform: translateY(-2px); box-shadow: 0 7px 0 #b3a100; }
+        .btn-yellow:active { transform: translateY(2px); box-shadow: 0 2px 0 #b3a100; }
+
+        /* VEREJNÁ LISTINA ÚČTOV */
+        .public-accounts-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 10px;
         }
 
-        .btn-yellow:active {
-            transform: translateY(2px);
-            box-shadow: 0 2px 0 #b3a100;
+        .public-account-card {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #1e293b;
+            padding: 8px 12px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            transition: 0.2s;
         }
 
-        .btn-vip-upgrade {
-            background: linear-gradient(135deg, #f59e0b, #ffe600);
-            color: #000;
-            font-weight: 900;
-            font-size: 11px;
-            padding: 6px 12px;
-            border-radius: 6px;
-            border: none;
-            cursor: pointer;
-            margin-left: 10px;
+        .public-account-card:hover {
+            border-color: var(--fn-yellow);
+            background: #27354f;
+        }
+
+        .acc-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .acc-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 1px solid var(--fn-yellow);
         }
 
         /* VICTORY OVERLAY */
         #victory-screen {
             position: absolute;
             inset: 0;
-            background: radial-gradient(circle, rgba(168, 85, 247, 0.4) 0%, rgba(10, 10, 20, 0.95) 100%);
+            background: radial-gradient(circle, rgba(168, 85, 247, 0.45) 0%, rgba(10, 10, 20, 0.96) 100%);
             display: none;
             flex-direction: column;
             align-items: center;
@@ -334,25 +339,25 @@
 
     <canvas id="gameCanvas"></canvas>
 
-    <!-- HORNÝ PROFILOVÝ PANEL (EPIC PROFILE) -->
+    <!-- HORNÝ STATUS PRIHLÁSENÉHO HRÁČA -->
     <div class="user-top-badge" id="profile-pill" style="display:none;">
         <img id="pill-avatar" class="avatar-img" src="" alt="Avatar">
-        <div class="user-meta">
-            <div class="user-name-txt">
+        <div style="display:flex; flex-direction:column; text-align:left;">
+            <div style="font-size:13px; font-weight:900; display:flex; align-items:center; gap:5px;">
                 <span id="pill-nick">Player</span>
                 <span id="pill-tier" class="badge-free">FREE</span>
             </div>
             <span style="font-size: 10px; color:#94a3b8;" id="pill-wins">Wins: 0</span>
         </div>
-        <button class="btn-vip-upgrade" id="btn-buy-vip">👑 KÚPIŤ BATTLE PASS VIP</button>
-        <button style="background:transparent; border:none; color:#ef4444; font-weight:800; cursor:pointer; font-size:11px;" id="btn-logout">LOGOUT</button>
+        <button id="btn-buy-vip" style="background:linear-gradient(135deg, #f59e0b, #ffe600); color:#000; font-weight:900; font-size:11px; padding:6px 12px; border-radius:6px; border:none; cursor:pointer; margin-left:10px;">👑 VIP PASS</button>
+        <button id="btn-logout" style="background:transparent; border:none; color:#ef4444; font-weight:800; cursor:pointer; font-size:11px;">LOGOUT</button>
     </div>
 
-    <!-- HUD FORTNITE BATTLE ROYALE -->
+    <!-- FORTNITE BATTLE ROYALE HUD -->
     <div class="hud-center">
         <div class="hud-stat">
             <span class="hud-title">NAŽIVE</span>
-            <span class="hud-val" id="hud-alive">25</span>
+            <span class="hud-val" id="hud-alive">45</span>
         </div>
         <div class="hud-stat">
             <span class="hud-title">ELIMINÁCIE</span>
@@ -360,7 +365,7 @@
         </div>
         <div class="hud-stat">
             <span class="hud-title" style="color:#d946ef;">BÚRKA SA SŤAHUJE</span>
-            <span class="hud-val" style="color:#d946ef;" id="hud-storm-timer">02:30</span>
+            <span class="hud-val" style="color:#d946ef;" id="hud-storm-timer">03:00</span>
         </div>
         <div class="hud-stat">
             <span class="hud-title">DĹŽKA HADÍKA</span>
@@ -368,7 +373,7 @@
         </div>
     </div>
 
-    <!-- SHIELD & HP -->
+    <!-- SHIELD & HP BARY -->
     <div class="hud-bottom-left">
         <div class="bar-wrap">
             <div class="bar-fill-shield" id="bar-shield" style="width: 100%;"></div>
@@ -380,84 +385,84 @@
         </div>
     </div>
 
-    <!-- KILL FEED -->
+    <!-- LIVE KILL FEED -->
     <div class="kill-feed" id="kill-feed"></div>
 
     <!-- VICTORY ROYALE #1 -->
     <div id="victory-screen">
         <h1 class="vic-title">#1 VICTORY ROYALE</h1>
-        <p style="font-size: 20px; font-weight: 800; margin-bottom: 25px;">Vyhral si zápas v Snake Royale!</p>
+        <p style="font-size: 20px; font-weight: 800; margin-bottom: 25px;">Zvíťazil si ako posledný preživší v 50-hráčskej aréne!</p>
         <button class="btn-yellow" style="max-width: 250px;" onclick="location.reload()">HRAŤ ZNOVA</button>
     </div>
 
-    <!-- MODÁL: PRIHLÁSENIE / REGISTRÁCIA FORTNITE ÚČTU -->
+    <!-- MODÁL: VEREJNÁ SIEŤ ÚČTOV A ŠTART HRY -->
     <div class="modal-screen" id="auth-modal">
-        <div class="epic-auth-box">
-            <h1>EPIC GAMES ACCOUNT</h1>
-            <p style="font-size: 11px; color:#94a3b8; margin-bottom: 18px;">Ukladá sa perzistentne do EMQX Cloud MQTT Databázy</p>
-
-            <div class="tab-btn-row">
-                <button class="tab-btn active" id="tab-login-btn">PRIHLÁSIŤ SA</button>
-                <button class="tab-btn" id="tab-reg-btn">VYTVORIŤ NOVÝ ÚČET</button>
+        <div class="lobby-box">
+            <div class="lobby-header">
+                <h1>FORTNITE SNAKE ROYALE</h1>
+                <p style="font-size: 12px; color:#94a3b8; margin-top: 4px;">Globálna sieť hráčov & EMQX Cloud Databáza</p>
             </div>
 
-            <!-- Formulár Prihlásenia -->
-            <div id="form-login">
-                <input type="text" id="log-username" class="f-input" placeholder="Epic Meno / Username">
-                <input type="password" id="log-pass" class="f-input" placeholder="Heslo">
-                <button class="btn-yellow" id="btn-submit-login">PRIHLÁSIŤ A HRAŤ</button>
-            </div>
+            <div class="lobby-content">
+                <!-- Vytvorenie verejného účtu -->
+                <div class="lobby-left">
+                    <h3 style="font-size:14px; margin-bottom:12px; color:var(--fn-yellow);">VYTVORIŤ VEREJNÝ ÚČET</h3>
+                    <input type="text" id="reg-username" class="f-input" placeholder="Epic GamerTag (napr. Ninja_SK)">
+                    
+                    <div style="text-align:left; font-size:10px; color:#94a3b8; margin-bottom:4px;">PROFILOVÁ FOTKA (DO VAULT KATALÓGU):</div>
+                    <input type="file" id="reg-avatar-file" class="f-input" accept="image/*">
 
-            <!-- Formulár Registrácie -->
-            <div id="form-register" style="display: none;">
-                <input type="text" id="reg-username" class="f-input" placeholder="Nové Epic Meno (GamerTag)">
-                <input type="password" id="reg-pass" class="f-input" placeholder="Heslo">
-                
-                <div style="text-align:left; font-size:11px; color:#94a3b8; margin-bottom:6px;">PROFILOVÁ FOTKA (AVATAR DO VAULT KATALÓGU):</div>
-                <input type="file" id="reg-avatar-file" class="f-input" accept="image/*">
+                    <div style="margin-bottom:12px;">
+                        <label style="font-size:10px; font-weight:800; color:#94a3b8;">MAPA (BIÓM):</label>
+                        <select id="map-select" class="f-input" style="margin-top:4px;">
+                            <option value="pleasant">🌳 Pleasant Meadows (Klasická Tráva)</option>
+                            <option value="desert">🏜️ Paradise Desert (Púšť & Kaňon)</option>
+                            <option value="frosty">❄️ Frosty Peaks (Zimný Ľad)</option>
+                            <option value="kevin">🔮 Kevin's Realm (Fialová Dimenzia)</option>
+                        </select>
+                    </div>
 
-                <button class="btn-yellow" id="btn-submit-register">ZAREGISTROVAŤ ÚČET</button>
-            </div>
+                    <button class="btn-yellow" id="btn-submit-register">ZAREGISTROVAŤ A HRAŤ</button>
+                </div>
 
-            <!-- Výber mapy -->
-            <div style="margin-top: 15px; text-align: left;">
-                <label style="font-size:11px; font-weight:800; color:#94a3b8;">MAPA (BIÓM):</label>
-                <select id="map-select" class="f-input" style="margin-top:4px;">
-                    <option value="pleasant">🌳 Pleasant Meadows (Klasická Zelená)</option>
-                    <option value="desert">🏜️ Paradise Desert (Púštny Kaňon)</option>
-                    <option value="frosty">❄️ Frosty Peaks (Zimný Ľadovec)</option>
-                    <option value="kevin">🔮 Kevin's Realm (Fialová Dimenzia)</option>
-                </select>
+                <!-- Verejné Účty v Cloude -->
+                <div class="lobby-right">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <h3 style="font-size:14px; color:var(--fn-blue);">VEREJNÉ ÚČTY V CLOUDE</h3>
+                        <span id="users-count" style="font-size:11px; color:#94a3b8;">0 účtov</span>
+                    </div>
+                    <p style="font-size:11px; color:#94a3b8; margin-top:4px; margin-bottom:10px;">Klikni na účet a hraj zaň okamžite:</p>
+                    
+                    <div class="public-accounts-list" id="public-accounts-list">
+                        <!-- Generované dynamicky z users_registry -->
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
     <script>
         // =======================================================
-        // 1. DÁTOVÁ ARCHITEKTÚRA EMQX CLOUD MQTT (PRESNE ZO ZADANIA)
+        // 1. EMQX CLOUD MQTT & DATABÁZOVÁ VRSTVA
         // =======================================================
         const MQTT_BROKER = "broker.emqx.io";
         const MQTT_PORT = 8084;
         const MQTT_PATH = "/mqtt";
-        const CLIENT_ID = "fn_acc_" + Math.random().toString(16).substring(2, 10);
+        const CLIENT_ID = "fn_mp_" + Math.random().toString(16).substring(2, 10);
 
-        // Perzistentné MQTT Topics (retained = true)
-        const TOPIC_VAULT = "dankermax/v1/vault_catalog";     // Katalóg fotiek/avatarov
-        const TOPIC_USERS = "dankermax/v1/users_registry";     // Databáza používateľov (Free / Premium VIP)
-        const TOPIC_REPORTS = "dankermax/v1/reports_queue";   // Hlásenia a transakcie
+        // Perzistentné témy podľa zadania
+        const TOPIC_VAULT = "dankermax/v1/vault_catalog";     // Globálny katalóg fotografií (Base64)
+        const TOPIC_USERS = "dankermax/v1/users_registry";     // Globálna databáza verejných účtov
+        const TOPIC_REPORTS = "dankermax/v1/reports_queue";   // Queue pre admina / transakcie
         const TOPIC_MP_POS = "dankermax/v1/snake_game/positions/";
 
         let mqttClient = null;
         let isMqttConnected = false;
 
-        // Globálne pamäťové cache (synchronizované z cloudu)
-        let cloudUsersRegistry = {}; // id -> { id, username, pass, displayName, tier, wins, avatarUrl }
-        let cloudVaultCatalog = [];  // [ { id, name, base64, tier, timestamp } ]
-
-        // Aktuálny lokálny prihlásený používateľ
+        let cloudUsersRegistry = {};
+        let cloudVaultCatalog = [];
         let currentUser = JSON.parse(localStorage.getItem("fn_cloud_session")) || null;
 
-        // Predvolený Fortnite avatar (Jonesy)
         const DEFAULT_AVATAR = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%23ffe600'/><circle cx='35' cy='42' r='8' fill='%23000'/><circle cx='65' cy='42' r='8' fill='%23000'/><path d='M30 65 Q50 85 70 65' stroke='%23000' stroke-width='6' fill='none'/></svg>";
 
         function connectMQTT() {
@@ -473,12 +478,12 @@
                     const topic = message.destinationName;
                     const payload = JSON.parse(message.payloadString);
 
-                    // A) Používateľská databáza (Users Registry)
+                    // 1. Verejné účty (Users Registry)
                     if (topic === TOPIC_USERS) {
                         cloudUsersRegistry = Object.assign(cloudUsersRegistry, payload);
                         localStorage.setItem("fn_cached_registry", JSON.stringify(cloudUsersRegistry));
-                        
-                        // Ak sme prihlásení, synchronizujeme aktuálny stav (napr. VIP status)
+                        renderPublicAccountsList();
+
                         if (currentUser && cloudUsersRegistry[currentUser.username]) {
                             currentUser = cloudUsersRegistry[currentUser.username];
                             localStorage.setItem("fn_cloud_session", JSON.stringify(currentUser));
@@ -486,12 +491,12 @@
                         }
                     }
 
-                    // B) Katalóg fotografií (Vault Catalog)
+                    // 2. Vault katalóg fotografií
                     if (topic === TOPIC_VAULT) {
                         cloudVaultCatalog = payload;
                     }
 
-                    // C) Multiplayer pozície
+                    // 3. Živý multiplayer ostatných hráčov
                     if (topic.startsWith(TOPIC_MP_POS)) {
                         const sender = topic.split("/").pop();
                         if (currentUser && sender !== currentUser.username && payload.alive) {
@@ -500,9 +505,7 @@
                             delete remoteSnakes[sender];
                         }
                     }
-                } catch (e) {
-                    console.error("Chyba spracovania MQTT dát:", e);
-                }
+                } catch (e) {}
             };
 
             mqttClient.connect({
@@ -510,12 +513,11 @@
                 timeout: 5,
                 onSuccess: () => {
                     isMqttConnected = true;
-                    // Odbery perzistentných tém
                     mqttClient.subscribe(TOPIC_USERS, { qos: 1 });
                     mqttClient.subscribe(TOPIC_VAULT, { qos: 1 });
                     mqttClient.subscribe(TOPIC_MP_POS + "+", { qos: 0 });
 
-                    // Auto-login ak existuje lokálna session
+                    // Auto-prihlásenie ak existuje session
                     if (currentUser) {
                         applyLogin(currentUser);
                     }
@@ -524,7 +526,7 @@
             });
         }
 
-        // Uloženie používateľov do cloudu (Retained = true)
+        // Zápis do perzistentnej databázy verejných účtov (retained = true)
         function pushUserRegistryToCloud() {
             if (!isMqttConnected) return;
             const msg = new Paho.MQTT.Message(JSON.stringify(cloudUsersRegistry));
@@ -534,7 +536,7 @@
             mqttClient.send(msg);
         }
 
-        // Zápis fotografie do Vault Katalógu (Retained = true)
+        // Zápis do Vault Katalógu (retained = true)
         function pushPhotoToVaultCatalog(photoObj) {
             if (!isMqttConnected) return;
             cloudVaultCatalog.push(photoObj);
@@ -545,11 +547,11 @@
             mqttClient.send(msg);
         }
 
-        // Zápis hlásenia do Reports Queue
+        // Zápis do Reports Queue
         function pushReportToQueue(action, details) {
             if (!isMqttConnected) return;
             const report = {
-                id: "TX_" + Date.now() + "_" + Math.floor(Math.random() * 1000),
+                id: "REP_" + Date.now(),
                 action: action,
                 user: currentUser ? currentUser.username : "guest",
                 details: details,
@@ -562,68 +564,81 @@
         }
 
         // =======================================================
-        // 2. AUTH SYSTÉM (REGISTRÁCIA, LOGIN, VIP NÁKUP)
+        // 2. VEREJNÉ ÚČTY V LOBBY (UI & REGISTRÁCIA)
         // =======================================================
-        const tabLoginBtn = document.getElementById("tab-login-btn");
-        const tabRegBtn = document.getElementById("tab-reg-btn");
-        const formLogin = document.getElementById("form-login");
-        const formRegister = document.getElementById("form-register");
+        function renderPublicAccountsList() {
+            const list = document.getElementById("public-accounts-list");
+            const keys = Object.keys(cloudUsersRegistry);
+            document.getElementById("users-count").innerText = `${keys.length} verejných účtov`;
 
-        tabLoginBtn.onclick = () => {
-            tabLoginBtn.classList.add("active");
-            tabRegBtn.classList.remove("active");
-            formLogin.style.display = "block";
-            formRegister.style.display = "none";
+            if (keys.length === 0) {
+                list.innerHTML = `<div style="font-size:11px; color:#64748b; padding:10px;">Zatiaľ nie sú registrované žiadne účty. Buď prvý!</div>`;
+                return;
+            }
+
+            list.innerHTML = keys.map(key => {
+                const u = cloudUsersRegistry[key];
+                return `
+                    <div class="public-account-card">
+                        <div class="acc-info">
+                            <img src="${u.avatar || DEFAULT_AVATAR}" class="acc-avatar">
+                            <div>
+                                <div style="font-size:12px; font-weight:800;">
+                                    ${u.username} 
+                                    ${u.tier === 'premium' ? '<span class="badge-vip">VIP</span>' : '<span class="badge-free">FREE</span>'}
+                                </div>
+                                <div style="font-size:10px; color:#94a3b8;">Výhry: <b>${u.wins || 0}</b> | Eliminácie: <b>${u.kills || 0}</b></div>
+                            </div>
+                        </div>
+                        <button onclick="selectPublicAccount('${u.username}')" style="background:var(--fn-blue); border:none; color:#000; font-weight:900; font-size:10px; padding:5px 10px; border-radius:6px; cursor:pointer;">HRAŤ</button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        window.selectPublicAccount = (username) => {
+            const user = cloudUsersRegistry[username];
+            if (user) {
+                pushReportToQueue("USER_LOGIN", { username: user.username });
+                applyLogin(user);
+            }
         };
 
-        tabRegBtn.onclick = () => {
-            tabRegBtn.classList.add("active");
-            tabLoginBtn.classList.remove("active");
-            formRegister.style.display = "block";
-            formLogin.style.display = "none";
-        };
-
-        // Registrácia
         document.getElementById("btn-submit-register").onclick = () => {
             const username = document.getElementById("reg-username").value.trim();
-            const pass = document.getElementById("reg-pass").value.trim();
             const avatarFile = document.getElementById("reg-avatar-file").files[0];
 
-            if (!username || !pass) {
-                alert("Zadaj meno aj heslo!");
+            if (!username) {
+                alert("Zadaj svoje Epic Meno!");
                 return;
             }
 
             if (cloudUsersRegistry[username]) {
-                alert("Používateľ s týmto Epic Menom už existuje!");
+                alert("Tento účet už existuje! Môžeš naň rovno kliknúť vo verejnom zozname.");
                 return;
             }
 
-            // Spracovanie avataru do Base64
             if (avatarFile) {
                 const reader = new FileReader();
-                reader.onload = (e) => {
-                    const base64Img = e.target.result;
-                    completeRegistration(username, pass, base64Img);
-                };
+                reader.onload = (e) => completeRegistration(username, e.target.result);
                 reader.readAsDataURL(avatarFile);
             } else {
-                completeRegistration(username, pass, DEFAULT_AVATAR);
+                completeRegistration(username, DEFAULT_AVATAR);
             }
         };
 
-        function completeRegistration(username, pass, avatarBase64) {
+        function completeRegistration(username, avatarBase64) {
             const newUser = {
                 id: "USR_" + Date.now(),
                 username: username,
-                pass: pass,
-                tier: "free", // Predvolene Free
+                tier: "free",
                 wins: 0,
+                kills: 0,
                 avatar: avatarBase64,
                 createdAt: new Date().toISOString()
             };
 
-            // 1. Zápis avatara do vault_catalog
+            // Uloženie do perzistentného vault_catalog
             pushPhotoToVaultCatalog({
                 id: "IMG_" + Date.now(),
                 name: username + "_avatar",
@@ -632,46 +647,24 @@
                 timestamp: Date.now()
             });
 
-            // 2. Zápis do databázy používateľov (users_registry)
+            // Uloženie do perzistentnej verejnej databázy účtov
             cloudUsersRegistry[username] = newUser;
             pushUserRegistryToCloud();
-
-            // 3. Log transakcie do reports_queue
-            pushReportToQueue("USER_REGISTERED", { username: username, tier: "free" });
+            pushReportToQueue("USER_REGISTERED", { username: username });
 
             applyLogin(newUser);
         }
 
-        // Prihlásenie
-        document.getElementById("btn-submit-login").onclick = () => {
-            const username = document.getElementById("log-username").value.trim();
-            const pass = document.getElementById("log-pass").value.trim();
-
-            if (!username || !pass) {
-                alert("Vyplň prihlasovacie údaje!");
-                return;
-            }
-
-            const user = cloudUsersRegistry[username];
-            if (!user || user.pass !== pass) {
-                alert("Nesprávne Epic Meno alebo heslo!");
-                return;
-            }
-
-            pushReportToQueue("USER_LOGIN", { username: username });
-            applyLogin(user);
-        };
-
         function applyLogin(user) {
             currentUser = user;
             localStorage.setItem("fn_cloud_session", JSON.stringify(currentUser));
-            
+
             document.getElementById("auth-modal").style.display = "none";
             document.getElementById("profile-pill").style.display = "flex";
 
             player.nick = user.username;
-            player.color = user.tier === "premium" ? "#ffd700" : "#22c55e"; // VIP má zlatého hada!
-            
+            player.color = user.tier === "premium" ? "#ffd700" : "#22c55e";
+
             updateProfileUI();
             startGame();
         }
@@ -696,31 +689,24 @@
             }
         }
 
-        // Kúpa Premium VIP (Battle Pass)
         document.getElementById("btn-buy-vip").onclick = () => {
             if (!currentUser) return;
-            if (confirm("Chceš aktivovať Fortnite Battle Pass VIP? Odomkne sa Zlatý Hadík a VIP Korunka!")) {
-                currentUser.tier = "premium";
-                cloudUsersRegistry[currentUser.username] = currentUser;
-                
-                // Uloženie do perzistentnej databázy
-                pushUserRegistryToCloud();
-                pushReportToQueue("PURCHASE_VIP_PASS", { username: currentUser.username, tier: "premium" });
-                
-                player.color = "#ffd700";
-                updateProfileUI();
-                addKillFeed("SYSTEM", `${currentUser.username} odomkol BATTLE PASS VIP! 👑`);
-            }
+            currentUser.tier = "premium";
+            cloudUsersRegistry[currentUser.username] = currentUser;
+            pushUserRegistryToCloud();
+            pushReportToQueue("PURCHASE_VIP_PASS", { username: currentUser.username });
+            player.color = "#ffd700";
+            updateProfileUI();
+            addKillFeed("SYSTEM", `${currentUser.username} odomkol BATTLE PASS VIP! 👑`);
         };
 
-        // Odhlásenie
         document.getElementById("btn-logout").onclick = () => {
             localStorage.removeItem("fn_cloud_session");
             location.reload();
         };
 
         // =======================================================
-        // 3. FORTNITE SNAKE ROYALE HERNÁ LOGIKA
+        // 3. HRA, MULTIPLAYER & 35+ BOTOV
         // =======================================================
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
@@ -732,60 +718,69 @@
         window.addEventListener("resize", resize);
         resize();
 
-        const WORLD_SIZE = 3600;
+        const WORLD_SIZE = 4500; // Väčšia mapa pre 50 hráčov
         let gameRunning = false;
         let isBoosting = false;
         let mousePos = { x: canvas.width / 2, y: canvas.height / 2 };
 
-        // Búrka (Storm)
         let storm = {
             x: WORLD_SIZE / 2,
             y: WORLD_SIZE / 2,
-            radius: WORLD_SIZE * 0.7,
+            radius: WORLD_SIZE * 0.75,
             shrinkRate: 0.16,
-            timer: 150
+            timer: 180
         };
 
-        // Hráč
         let player = {
-            x: WORLD_SIZE / 2 + (Math.random() - 0.5) * 500,
-            y: WORLD_SIZE / 2 + (Math.random() - 0.5) * 500,
+            x: WORLD_SIZE / 2 + (Math.random() - 0.5) * 600,
+            y: WORLD_SIZE / 2 + (Math.random() - 0.5) * 600,
             radius: 14,
             speed: 3.8,
             boostSpeed: 6.2,
             angle: 0,
             health: 100,
             shield: 100,
-            score: 0,
             kills: 0,
             history: [],
-            length: 18, // Rastie každým jedlom!
+            length: 18, // RASTIE KAŽDÝM JEDLOM
             nick: "Player",
             color: "#22c55e",
             alive: true
         };
 
-        // Boti & Sieťoví hráči
         let remoteSnakes = {};
         let bots = [];
-        const BOT_NAMES = ["Peely_🍌", "Jonesy_OG", "Midas_Gold", "Renegade_Raider", "Fishstick_🐟", "Dark_Voyager", "Slurp_Boi", "Raven_X"];
-        const BOT_COLORS = ["#ef4444", "#3b82f6", "#a855f7", "#ec4899", "#14b8a6", "#f97316"];
 
+        // 35+ Autentických Fortnite botov
+        const BOT_NAMES = [
+            "Peely_Banana🍌", "Jonesy_OG", "Midas_Gold👑", "Renegade_Raider",
+            "Fishstick_🐟", "Dark_Voyager", "Slurp_Boi", "Raven_X",
+            "Travis_Scott", "Ninja_Bot", "Drift_Fox", "Skull_Trooper💀",
+            "Cuddle_Team_Leader", "Galaxy_Warrior", "Default_Dan", "Llama_Lover",
+            "Chug_Jugger", "Aura_Sweat", "Catalyst_Speed", "Black_Knight",
+            "Sparkle_Specialist", "Omega_Max", "Raptor_Pilot", "Valor_Shield",
+            "Havoc_Pro", "Rust_Lord", "Brite_Bomber", "Sun_Strider",
+            "Beef_Boss🍔", "Tomato_Head🍅", "Dire_Wolf", "Zenith_Sniper",
+            "Lynx_Cat", "Ice_King❄️", "Hybrid_Dragon", "Ember_Fire🔥"
+        ];
+        const BOT_COLORS = ["#ef4444", "#3b82f6", "#a855f7", "#ec4899", "#14b8a6", "#f97316", "#84cc16", "#e11d48"];
+
+        // Loot Orby (Potrava pre rast)
         let lootItems = [];
-        for (let i = 0; i < 260; i++) spawnLootItem();
+        for (let i = 0; i < 400; i++) spawnLootItem();
 
         function spawnLootItem(type = null) {
-            let selectedType = type || (Math.random() < 0.15 ? "slurp" : "xp");
+            let t = type || (Math.random() < 0.15 ? "slurp" : "xp");
             lootItems.push({
                 x: Math.random() * WORLD_SIZE,
                 y: Math.random() * WORLD_SIZE,
-                type: selectedType,
-                radius: selectedType === "slurp" ? 8 : 5
+                type: t,
+                radius: t === "slurp" ? 8 : 5
             });
         }
 
-        // Supply Drop Bedne
-        for (let i = 0; i < 6; i++) {
+        // Supply Drops bedne
+        for (let i = 0; i < 8; i++) {
             lootItems.push({ x: Math.random() * WORLD_SIZE, y: Math.random() * WORLD_SIZE, type: "drop", radius: 18 });
         }
 
@@ -799,7 +794,7 @@
                     angle: Math.random() * Math.PI * 2,
                     speed: 3.2,
                     radius: 14,
-                    length: 18 + Math.floor(Math.random() * 12),
+                    length: 16 + Math.floor(Math.random() * 15),
                     history: [],
                     alive: true,
                     color: BOT_COLORS[i % BOT_COLORS.length],
@@ -808,12 +803,7 @@
             }
         }
 
-        // Ovládanie
-        window.addEventListener("mousemove", (e) => {
-            mousePos.x = e.clientX;
-            mousePos.y = e.clientY;
-        });
-
+        window.addEventListener("mousemove", (e) => { mousePos.x = e.clientX; mousePos.y = e.clientY; });
         window.addEventListener("mousedown", (e) => { if (e.button === 0) isBoosting = true; });
         window.addEventListener("mouseup", (e) => { if (e.button === 0) isBoosting = false; });
         window.addEventListener("keydown", (e) => { if (e.code === "Space") isBoosting = true; });
@@ -833,13 +823,12 @@
             gameRunning = true;
         }
 
-        // Hlavný update
         let lastMqttSend = 0;
         function update() {
             if (!gameRunning) return;
 
-            // Zmenšovanie búrky
-            if (storm.radius > 160) storm.radius -= storm.shrinkRate;
+            // Búrka
+            if (storm.radius > 180) storm.radius -= storm.shrinkRate;
             if (storm.timer > 0) {
                 storm.timer -= 1/60;
                 let m = Math.floor(storm.timer / 60);
@@ -847,11 +836,11 @@
                 document.getElementById("hud-storm-timer").innerText = `${m < 10 ? '0':''}${m}:${s < 10 ? '0':''}${s}`;
             }
 
-            // Poškodenie búrkou
+            // Storm damage pre hráča
             let pDist = Math.hypot(player.x - storm.x, player.y - storm.y);
             if (pDist > storm.radius) {
                 if (player.shield > 0) player.shield -= 0.3;
-                else player.health -= 0.4;
+                else player.health -= 0.45;
                 if (player.health <= 0 && player.alive) handleDeath("Búrka");
             }
 
@@ -864,7 +853,7 @@
                 let curSpeed = player.speed;
                 if (isBoosting && (player.shield > 0 || player.length > 15)) {
                     curSpeed = player.boostSpeed;
-                    if (player.shield > 0) player.shield -= 0.2;
+                    if (player.shield > 0) player.shield -= 0.25;
                 }
 
                 player.x += Math.cos(player.angle) * curSpeed;
@@ -883,11 +872,11 @@
                         if (loot.type === "slurp") {
                             player.shield = Math.min(100, player.shield + 25);
                         } else if (loot.type === "drop") {
-                            player.length += 8; // RAST O 8
+                            player.length += 8; // RAST O 8 ČLÁNKOV
                             player.shield = 100;
                             player.health = 100;
                         } else {
-                            player.length += 1; // RAST O 1 ČLÁNOK ZA JEDLO
+                            player.length += 1; // RAST O 1 ČLÁNOK ZA KAŽDÉ JEDLO
                         }
                         lootItems.splice(i, 1);
                         spawnLootItem();
@@ -895,7 +884,7 @@
                 }
             }
 
-            // Boti AI
+            // Update botov
             bots.forEach(b => {
                 if (!b.alive) return;
                 let dC = Math.hypot(b.x - storm.x, b.y - storm.y);
@@ -924,18 +913,37 @@
                     if (player.length >= b.length) {
                         b.alive = false;
                         player.kills++;
-                        player.length += Math.floor(b.length / 2); // Zjedenie celého bota!
+                        player.length += Math.floor(b.length / 2);
                         addKillFeed(player.nick, b.nick);
                         pushReportToQueue("ELIMINATION", { killer: player.nick, victim: b.nick });
+                        if (currentUser) {
+                            currentUser.kills = (currentUser.kills || 0) + 1;
+                            cloudUsersRegistry[currentUser.username] = currentUser;
+                            pushUserRegistryToCloud();
+                        }
                     } else {
                         handleDeath(b.nick);
                     }
                 }
             });
 
-            // Odosielanie polohy cez EMQX Cloud MQTT
-            if (isMqttConnected && currentUser && Date.now() - lastMqttSend > 100) {
+            // Multiplayer kolízia so živými hráčmi (Ak narazíš hlavou do ich tela, zomrieš)
+            for (let id in remoteSnakes) {
+                let rp = remoteSnakes[id];
+                if (player.alive && rp.body) {
+                    for (let seg of rp.body) {
+                        if (Math.hypot(player.x - seg.x, player.y - seg.y) < player.radius + 6) {
+                            handleDeath(rp.nick);
+                            break;
+                        }
+                    }
+                }
+            }
+
+            // Odosielanie polohy celého tela cez MQTT (Multiplayer broadcast)
+            if (isMqttConnected && currentUser && Date.now() - lastMqttSend > 90) {
                 lastMqttSend = Date.now();
+                const sampledBody = player.history.filter((_, idx) => idx % 4 === 0).slice(0, 30);
                 const packet = {
                     x: Math.round(player.x),
                     y: Math.round(player.y),
@@ -943,14 +951,15 @@
                     length: player.length,
                     alive: player.alive,
                     tier: currentUser.tier,
-                    color: player.color
+                    color: player.color,
+                    body: sampledBody
                 };
                 const msg = new Paho.MQTT.Message(JSON.stringify(packet));
                 msg.destinationName = TOPIC_MP_POS + currentUser.username;
                 mqttClient.send(msg);
             }
 
-            // HUD štatistiky
+            // HUD počítadlá
             let aliveCount = (player.alive ? 1 : 0) + bots.filter(b => b.alive).length + Object.keys(remoteSnakes).length;
             document.getElementById("hud-alive").innerText = aliveCount;
             document.getElementById("hud-kills").innerText = player.kills;
@@ -960,7 +969,7 @@
             document.getElementById("val-health").innerText = Math.max(0, Math.round(player.health));
             document.getElementById("bar-health").style.width = Math.max(0, player.health) + "%";
 
-            // Victory Royale podmienka
+            // Victory Royale
             if (aliveCount <= 1 && player.alive) {
                 document.getElementById("victory-screen").style.display = "flex";
                 if (currentUser) {
@@ -984,7 +993,7 @@
         }
 
         // =======================================================
-        // 4. VYKRESLOVANIE (RENDER CANVAPU)
+        // 4. VYKRESLOVANIE (RENDER MAPY, BOTOV & MULTIPLAYERU)
         // =======================================================
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -995,21 +1004,21 @@
             ctx.save();
             ctx.translate(-camX, -camY);
 
-            // Pozadie mapy
-            ctx.fillStyle = "#0d1424";
+            // Podklad arény
+            ctx.fillStyle = "#0c1220";
             ctx.fillRect(0, 0, WORLD_SIZE, WORLD_SIZE);
 
-            // Mriežka
-            ctx.strokeStyle = "#162038";
+            // Fortnite grid
+            ctx.strokeStyle = "#162035";
             ctx.lineWidth = 2;
-            for (let x = 0; x <= WORLD_SIZE; x += 90) {
+            for (let x = 0; x <= WORLD_SIZE; x += 100) {
                 ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, WORLD_SIZE); ctx.stroke();
             }
-            for (let y = 0; y <= WORLD_SIZE; y += 90) {
+            for (let y = 0; y <= WORLD_SIZE; y += 100) {
                 ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(WORLD_SIZE, y); ctx.stroke();
             }
 
-            // Loot Orby
+            // Loot orby
             lootItems.forEach(l => {
                 if (l.type === "drop") {
                     ctx.fillStyle = "#0284c7";
@@ -1025,24 +1034,20 @@
                 }
             });
 
-            // Boti
+            // Vykreslenie všetkých 35+ botov
             bots.forEach(b => {
                 if (b.alive) renderSnake(b.history, b.radius, b.color, b.nick, false);
             });
 
-            // Multiplayer hráči
+            // Vykreslenie živých online spoluhráčov (Multiplayer)
             for (let id in remoteSnakes) {
                 let rp = remoteSnakes[id];
-                ctx.fillStyle = rp.color || "#ff0055";
-                ctx.beginPath();
-                ctx.arc(rp.x, rp.y, 16, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.fillStyle = "#fff";
-                ctx.font = "bold 12px Montserrat";
-                ctx.fillText(rp.nick + (rp.tier === 'premium' ? " 👑" : ""), rp.x - 20, rp.y - 20);
+                if (rp.body && rp.body.length > 0) {
+                    renderSnake(rp.body, 14, rp.color || "#eab308", rp.nick, rp.tier === "premium");
+                }
             }
 
-            // Hráč
+            // Lokálny hráč
             if (player.alive) {
                 renderSnake(player.history, player.radius, player.color, player.nick, currentUser && currentUser.tier === "premium");
             }
@@ -1069,7 +1074,7 @@
         function renderSnake(history, baseRadius, color, nick, isVip) {
             if (history.length === 0) return;
 
-            for (let i = history.length - 1; i >= 0; i -= 4) {
+            for (let i = history.length - 1; i >= 0; i -= 2) {
                 let pt = history[i];
                 let ratio = 1 - (i / history.length) * 0.45;
                 ctx.fillStyle = isVip ? "#f59e0b" : color;
@@ -1084,7 +1089,6 @@
             ctx.arc(head.x, head.y, baseRadius + 2, 0, Math.PI * 2);
             ctx.fill();
 
-            // Meno s korunkou ak je VIP
             ctx.fillStyle = "#fff";
             ctx.font = "900 12px Montserrat";
             ctx.textAlign = "center";
@@ -1097,7 +1101,6 @@
             requestAnimationFrame(loop);
         }
 
-        // Štart siete a hernej slučky
         connectMQTT();
         requestAnimationFrame(loop);
     </script>
