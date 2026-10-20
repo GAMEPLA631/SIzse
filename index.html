@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Fortnite: Snake Royale - Autoplay & Mobile Edition</title>
+    <title>Fortnite: Snake Royale - Public Global Multiplayer</title>
     <!-- Paho MQTT cez CDN -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
     <style>
@@ -24,7 +24,7 @@
             padding: 0;
             user-select: none;
             -webkit-user-select: none;
-            touch-action: none; /* Zákaz zoomu a nechceného scrollovania na mobile */
+            touch-action: none;
         }
 
         body, html {
@@ -45,7 +45,7 @@
             display: block;
         }
 
-        /* HORNÝ PROFILOVÝ STATUS */
+        /* HORNÝ STATUS PRIHLÁSENÉHO HRÁČA */
         .user-top-badge {
             position: absolute;
             top: 15px;
@@ -225,11 +225,11 @@
             gap: 5px;
             z-index: 20;
             pointer-events: none;
-            max-width: 250px;
+            max-width: 260px;
         }
 
         .kill-row {
-            background: rgba(0, 0, 0, 0.75);
+            background: rgba(0, 0, 0, 0.8);
             padding: 5px 10px;
             border-radius: 6px;
             font-size: 10px;
@@ -412,6 +412,10 @@
             <span class="hud-title">NAŽIVE</span>
             <span class="hud-val" id="hud-alive">45</span>
         </div>
+        <div class="hud-stat" style="border-left: 1px solid #334155; padding-left: 12px;">
+            <span class="hud-title" style="color:var(--fn-blue);">👥 ĽUDIA ONLINE</span>
+            <span class="hud-val" style="color:var(--fn-blue);" id="hud-real-players">1</span>
+        </div>
         <div class="hud-stat">
             <span class="hud-title">KILLS</span>
             <span class="hud-val" id="hud-kills">0</span>
@@ -459,13 +463,13 @@
         <div class="lobby-box">
             <div class="lobby-header">
                 <h1>FORTNITE SNAKE ROYALE</h1>
-                <p style="font-size: 11px; color:#94a3b8; margin-top: 2px;">Mobil & PC | Autoplay Bot | EMQX Cloud</p>
+                <p style="font-size: 11px; color:#94a3b8; margin-top: 2px;">Verejný Globálny Multiplayer | Všetci hráči spolu v aréne</p>
             </div>
 
             <div class="lobby-content">
                 <div class="lobby-left">
                     <h3 style="font-size:13px; margin-bottom:10px; color:var(--fn-yellow);">VYTVORIŤ VEREJNÝ ÚČET</h3>
-                    <input type="text" id="reg-username" class="f-input" placeholder="Epic GamerTag (napr. Pro_Snake)">
+                    <input type="text" id="reg-username" class="f-input" placeholder="Epic GamerTag (napr. Pro_Player)">
                     
                     <div style="font-size:10px; color:#94a3b8; margin-bottom:4px;">PROFILOVÁ FOTKA (VAULT KATALÓG):</div>
                     <input type="file" id="reg-avatar-file" class="f-input" accept="image/*">
@@ -486,17 +490,19 @@
 
     <script>
         // =======================================================
-        // 1. EMQX CLOUD MQTT ARCHITEKTÚRA
+        // 1. EMQX CLOUD MQTT ARCHITEKTÚRA (GLOBÁLNY MULTIPLAYER)
         // =======================================================
         const MQTT_BROKER = "broker.emqx.io";
         const MQTT_PORT = 8084;
         const MQTT_PATH = "/mqtt";
-        const CLIENT_ID = "fn_mob_" + Math.random().toString(16).substring(2, 10);
+        
+        // Trvalý náhodný ID kľúč pre každého živého klienta
+        const CLIENT_ID = "fn_net_" + Math.random().toString(16).substring(2, 10);
 
         const TOPIC_VAULT = "dankermax/v1/vault_catalog";
         const TOPIC_USERS = "dankermax/v1/users_registry";
         const TOPIC_REPORTS = "dankermax/v1/reports_queue";
-        const TOPIC_MP_POS = "dankermax/v1/snake_game/positions/";
+        const TOPIC_MP_BASE = "dankermax/v1/snake_game/positions/";
 
         let mqttClient = null;
         let isMqttConnected = false;
@@ -512,7 +518,7 @@
 
             mqttClient.onConnectionLost = () => {
                 isMqttConnected = false;
-                setTimeout(connectMQTT, 3000);
+                setTimeout(connectMQTT, 2500);
             };
 
             mqttClient.onMessageArrived = (message) => {
@@ -520,6 +526,7 @@
                     const topic = message.destinationName;
                     const payload = JSON.parse(message.payloadString);
 
+                    // 1. Databáza používateľov
                     if (topic === TOPIC_USERS) {
                         cloudUsersRegistry = Object.assign(cloudUsersRegistry, payload);
                         localStorage.setItem("fn_cached_registry", JSON.stringify(cloudUsersRegistry));
@@ -532,33 +539,48 @@
                         }
                     }
 
+                    // 2. Vault katalóg
                     if (topic === TOPIC_VAULT) {
                         cloudVaultCatalog = payload;
                     }
 
-                    if (topic.startsWith(TOPIC_MP_POS)) {
-                        const sender = topic.split("/").pop();
-                        if (currentUser && sender !== currentUser.username && payload.alive) {
-                            remoteSnakes[sender] = { ...payload, lastUpdate: Date.now() };
-                        } else if (!payload.alive) {
-                            delete remoteSnakes[sender];
+                    // 3. ŽIVÝ MULTIPLAYER: Príjem súradníc všetkých ostatných hráčov
+                    if (topic.startsWith(TOPIC_MP_BASE)) {
+                        const senderId = topic.substring(TOPIC_MP_BASE.length);
+                        if (senderId !== CLIENT_ID) {
+                            if (payload.alive) {
+                                remoteSnakes[senderId] = {
+                                    ...payload,
+                                    lastSeen: Date.now()
+                                };
+                            } else {
+                                delete remoteSnakes[senderId];
+                            }
                         }
                     }
                 } catch (e) {}
             };
 
+            // Nastavenie Last-Will správy: Ak sa hráč odpojí, jeho hadík ihneď zmizne z mapy
+            const willMsg = new Paho.MQTT.Message(JSON.stringify({ alive: false, clientId: CLIENT_ID }));
+            willMsg.destinationName = TOPIC_MP_BASE + CLIENT_ID;
+            willMsg.qos = 0;
+            willMsg.retained = false;
+
             mqttClient.connect({
                 useSSL: true,
                 timeout: 5,
+                willMessage: willMsg,
                 onSuccess: () => {
                     isMqttConnected = true;
+                    // Prihlásenie na globálny wildcard `#` pre všetky pozície hráčov
+                    mqttClient.subscribe(TOPIC_MP_BASE + "#", { qos: 0 });
                     mqttClient.subscribe(TOPIC_USERS, { qos: 1 });
                     mqttClient.subscribe(TOPIC_VAULT, { qos: 1 });
-                    mqttClient.subscribe(TOPIC_MP_POS + "+", { qos: 0 });
 
                     if (currentUser) applyLogin(currentUser);
                 },
-                onFailure: () => setTimeout(connectMQTT, 4000)
+                onFailure: () => setTimeout(connectMQTT, 3500)
             });
         }
 
@@ -725,12 +747,18 @@
         };
 
         document.getElementById("btn-logout").onclick = () => {
+            // Poslať odhlásenie do siete
+            if (isMqttConnected) {
+                const msg = new Paho.MQTT.Message(JSON.stringify({ alive: false }));
+                msg.destinationName = TOPIC_MP_BASE + CLIENT_ID;
+                mqttClient.send(msg);
+            }
             localStorage.removeItem("fn_cloud_session");
             location.reload();
         };
 
         // =======================================================
-        // 3. AUTOPLAY BOT LOGIKA (GUI TRIGGER)
+        // 3. AUTOPLAY BOT LOGIKA
         // =======================================================
         let isAutoplay = false;
         const btnAutoplay = document.getElementById("btn-autoplay");
@@ -748,26 +776,21 @@
             }
         });
 
-        // AI funkcia pre Autoplay Bota
         function runAutoplayAI() {
             if (!isAutoplay || !player.alive) return;
 
-            // 1. Priorita: Vyhnutie sa búrke
             let distFromStormCenter = Math.hypot(player.x - storm.x, player.y - storm.y);
             if (distFromStormCenter > storm.radius * 0.72) {
-                // Rýchlo nasmerovať do stredu bezpečnej zóny
                 player.angle = Math.atan2(storm.y - player.y, storm.x - player.x);
                 isBoosting = true;
                 return;
             }
 
-            // 2. Priorita: Vyhľadanie najlepšieho lootu (Drop, Slurp, alebo XP)
             let targetLoot = null;
             let minDist = 999999;
 
             for (let loot of lootItems) {
                 let d = Math.hypot(player.x - loot.x, player.y - loot.y);
-                // Uprednostniť Supply Drop a Slurp
                 let weight = (loot.type === "drop") ? 0.3 : (loot.type === "slurp" ? 0.6 : 1.0);
                 let scoreDist = d * weight;
 
@@ -781,12 +804,10 @@
                 player.angle = Math.atan2(targetLoot.y - player.y, targetLoot.x - player.x);
             }
 
-            // 3. Priorita: Vyhýbanie sa veľkým botom
             for (let b of bots) {
                 if (b.alive) {
                     let dB = Math.hypot(player.x - b.x, player.y - b.y);
                     if (dB < 160 && b.length > player.length) {
-                        // Únik v opačnom smere!
                         player.angle = Math.atan2(player.y - b.y, player.x - b.x);
                         isBoosting = true;
                         return;
@@ -794,7 +815,6 @@
                 }
             }
 
-            // Šetrenie štítu, boost len občas
             isBoosting = (minDist < 120 && targetLoot && targetLoot.type === "drop");
         }
 
@@ -814,7 +834,6 @@
         let mousePos = { x: canvas.width / 2, y: canvas.height / 2 };
         let isBoosting = false;
 
-        // PC Ovládanie myšou a klávesnicou
         window.addEventListener("mousemove", (e) => {
             if (!isAutoplay) {
                 mousePos.x = e.clientX;
@@ -834,15 +853,15 @@
             if (e.code === "Space" && !isAutoplay) isBoosting = false;
         });
 
-        // MOBILNÉ DOTYKOVÉ OVLÁDANIE (TOUCH DRAG)
         function handleTouch(e) {
-            if (isAutoplay) isAutoplay = false; // Dotyk hráča zruší autoplay
-            btnAutoplay.classList.remove("active");
-            autoplayStatus.innerText = "OFF";
+            if (isAutoplay) {
+                isAutoplay = false;
+                btnAutoplay.classList.remove("active");
+                autoplayStatus.innerText = "OFF";
+            }
 
             if (e.touches.length > 0) {
                 const touch = e.touches[0];
-                // Zameranie smeru od stredu obrazovky
                 mousePos.x = touch.clientX;
                 mousePos.y = touch.clientY;
             }
@@ -851,21 +870,15 @@
         canvas.addEventListener("touchstart", (e) => { e.preventDefault(); handleTouch(e); }, { passive: false });
         canvas.addEventListener("touchmove", (e) => { e.preventDefault(); handleTouch(e); }, { passive: false });
 
-        // Mobilné tlačidlo BOOST
         const mobileBoostBtn = document.getElementById("mobile-boost-btn");
         mobileBoostBtn.addEventListener("touchstart", (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            isBoosting = true;
+            e.preventDefault(); e.stopPropagation(); isBoosting = true;
         }, { passive: false });
 
         mobileBoostBtn.addEventListener("touchend", (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            isBoosting = false;
+            e.preventDefault(); e.stopPropagation(); isBoosting = false;
         }, { passive: false });
 
-        // Podpora pre kliknutie na boost tlačidlo myšou
         mobileBoostBtn.addEventListener("mousedown", (e) => { e.stopPropagation(); isBoosting = true; });
         mobileBoostBtn.addEventListener("mouseup", (e) => { e.stopPropagation(); isBoosting = false; });
 
@@ -970,7 +983,6 @@
         function update() {
             if (!gameRunning) return;
 
-            // Spustenie Autoplay AI ak je zapnutý
             if (isAutoplay) {
                 runAutoplayAI();
             }
@@ -984,7 +996,7 @@
                 document.getElementById("hud-storm-timer").innerText = `${m < 10 ? '0':''}${m}:${s < 10 ? '0':''}${s}`;
             }
 
-            // Storm damage pre hráča
+            // Storm damage pre lokálneho hráča
             let pDist = Math.hypot(player.x - storm.x, player.y - storm.y);
             if (pDist > storm.radius) {
                 if (player.shield > 0) player.shield -= 0.3;
@@ -1026,7 +1038,7 @@
                             player.shield = 100;
                             player.health = 100;
                         } else {
-                            player.length += 1; // Rast o 1 článok
+                            player.length += 1;
                         }
                         lootItems.splice(i, 1);
                         spawnLootItem();
@@ -1058,7 +1070,7 @@
                 b.history.unshift({ x: b.x, y: b.y });
                 if (b.history.length > b.length * 5) b.history.pop();
 
-                // Súboj
+                // Súboj s botom
                 if (player.alive && Math.hypot(player.x - b.x, player.y - b.y) < player.radius + b.radius) {
                     if (player.length >= b.length) {
                         b.alive = false;
@@ -1077,41 +1089,54 @@
                 }
             });
 
-            // Multiplayer kolízia so živými hráčmi
+            // Čistenie neaktívnych multiplayer hráčov (timeout 4 sekundy)
+            const now = Date.now();
+            for (let id in remoteSnakes) {
+                if (now - remoteSnakes[id].lastSeen > 4000) {
+                    delete remoteSnakes[id];
+                }
+            }
+
+            // Multiplayer kolízia so živými hráčmi (ak narazíš do tela iného hráča)
             for (let id in remoteSnakes) {
                 let rp = remoteSnakes[id];
                 if (player.alive && rp.body) {
                     for (let seg of rp.body) {
                         if (Math.hypot(player.x - seg.x, player.y - seg.y) < player.radius + 6) {
-                            handleDeath(rp.nick);
+                            handleDeath(rp.nick + " [LIVE]");
                             break;
                         }
                     }
                 }
             }
 
-            // Odosielanie polohy cez EMQX Cloud MQTT
-            if (isMqttConnected && currentUser && Date.now() - lastMqttSend > 90) {
+            // ODOSIELANIE POLOHY DO CLOUDU (Multiplayer Broadcast)
+            if (isMqttConnected && player.alive && Date.now() - lastMqttSend > 80) {
                 lastMqttSend = Date.now();
-                const sampledBody = player.history.filter((_, idx) => idx % 4 === 0).slice(0, 30);
+                // Odošleme zredukované telo pre nulový lag
+                const sampledBody = player.history.filter((_, idx) => idx % 3 === 0).slice(0, 35);
                 const packet = {
+                    clientId: CLIENT_ID,
                     x: Math.round(player.x),
                     y: Math.round(player.y),
                     nick: player.nick,
                     length: player.length,
                     alive: player.alive,
-                    tier: currentUser.tier,
+                    tier: currentUser ? currentUser.tier : "free",
                     color: player.color,
                     body: sampledBody
                 };
                 const msg = new Paho.MQTT.Message(JSON.stringify(packet));
-                msg.destinationName = TOPIC_MP_POS + currentUser.username;
+                msg.destinationName = TOPIC_MP_BASE + CLIENT_ID;
                 mqttClient.send(msg);
             }
 
-            // HUD
-            let aliveCount = (player.alive ? 1 : 0) + bots.filter(b => b.alive).length + Object.keys(remoteSnakes).length;
+            // Počítadlá hráčov
+            const realPlayerCount = 1 + Object.keys(remoteSnakes).length; // Ty + ostatní reálni ľudia
+            const aliveCount = (player.alive ? 1 : 0) + bots.filter(b => b.alive).length + Object.keys(remoteSnakes).length;
+
             document.getElementById("hud-alive").innerText = aliveCount;
+            document.getElementById("hud-real-players").innerText = realPlayerCount;
             document.getElementById("hud-kills").innerText = player.kills;
             document.getElementById("hud-len").innerText = player.length;
             document.getElementById("val-shield").innerText = Math.round(player.shield);
@@ -1136,6 +1161,14 @@
             player.alive = false;
             addKillFeed(killer, player.nick);
             pushReportToQueue("PLAYER_DIED", { victim: player.nick, killer: killer });
+
+            // Oznámiť sieti okamžitú smrť
+            if (isMqttConnected) {
+                const msg = new Paho.MQTT.Message(JSON.stringify({ alive: false, clientId: CLIENT_ID }));
+                msg.destinationName = TOPIC_MP_BASE + CLIENT_ID;
+                mqttClient.send(msg);
+            }
+
             setTimeout(() => {
                 alert(`💀 Bol si eliminovaný (${killer})!`);
                 location.reload();
@@ -1143,7 +1176,7 @@
         }
 
         // =======================================================
-        // 6. RENDER (CANVAS)
+        // 6. RENDER (CANVAS & ŽIVÍ MULTIPLAYER HRÁČI)
         // =======================================================
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -1166,6 +1199,7 @@
                 ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(WORLD_SIZE, y); ctx.stroke();
             }
 
+            // Loot
             lootItems.forEach(l => {
                 if (l.type === "drop") {
                     ctx.fillStyle = "#0284c7";
@@ -1181,19 +1215,22 @@
                 }
             });
 
+            // 1. Kreslenie Botov
             bots.forEach(b => {
-                if (b.alive) renderSnake(b.history, b.radius, b.color, b.nick, false);
+                if (b.alive) renderSnake(b.history, b.radius, b.color, b.nick, false, false);
             });
 
+            // 2. Kreslenie VŠETKÝCH REÁLNYCH ŽIVÝCH HRÁČOV (Multiplayer)
             for (let id in remoteSnakes) {
                 let rp = remoteSnakes[id];
                 if (rp.body && rp.body.length > 0) {
-                    renderSnake(rp.body, 14, rp.color || "#eab308", rp.nick, rp.tier === "premium");
+                    renderSnake(rp.body, 14, rp.color || "#00d2ff", rp.nick, rp.tier === "premium", true);
                 }
             }
 
+            // 3. Lokálny hráč (Ty)
             if (player.alive) {
-                renderSnake(player.history, player.radius, player.color, (isAutoplay ? "🤖 " : "") + player.nick, currentUser && currentUser.tier === "premium");
+                renderSnake(player.history, player.radius, player.color, (isAutoplay ? "🤖 " : "") + player.nick + " (TY)", currentUser && currentUser.tier === "premium", false);
             }
 
             // Búrka (Storm)
@@ -1215,9 +1252,11 @@
             ctx.restore();
         }
 
-        function renderSnake(history, baseRadius, color, nick, isVip) {
+        // Vykreslenie hadíka s rozlíšením živých hráčov a botov
+        function renderSnake(history, baseRadius, color, nick, isVip, isRealLivePlayer) {
             if (history.length === 0) return;
 
+            // Telo
             for (let i = history.length - 1; i >= 0; i -= 2) {
                 let pt = history[i];
                 let ratio = 1 - (i / history.length) * 0.45;
@@ -1227,12 +1266,22 @@
                 ctx.fill();
             }
 
+            // Hlava
             let head = history[0];
-            ctx.fillStyle = "#fff";
+            ctx.fillStyle = isRealLivePlayer ? "#00d2ff" : "#fff";
             ctx.beginPath();
             ctx.arc(head.x, head.y, baseRadius + 2, 0, Math.PI * 2);
             ctx.fill();
 
+            // Živý hráč má špeciálny modrý/zlatý tag [LIVE]
+            if (isRealLivePlayer) {
+                ctx.fillStyle = "#00d2ff";
+                ctx.font = "900 9px Montserrat";
+                ctx.textAlign = "center";
+                ctx.fillText("● LIVE HRÁČ", head.x, head.y - 30);
+            }
+
+            // Meno a VIP korunka
             ctx.fillStyle = "#fff";
             ctx.font = "900 11px Montserrat";
             ctx.textAlign = "center";
