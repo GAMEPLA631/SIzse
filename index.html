@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Fortnite: Snake Royale 50-Player Arena (EMQX Cloud)</title>
+    <title>Fortnite: Snake Royale - Autoplay & Mobile Edition</title>
     <!-- Paho MQTT cez CDN -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
     <style>
@@ -23,6 +23,8 @@
             margin: 0;
             padding: 0;
             user-select: none;
+            -webkit-user-select: none;
+            touch-action: none; /* Zákaz zoomu a nechceného scrollovania na mobile */
         }
 
         body, html {
@@ -47,12 +49,12 @@
         .user-top-badge {
             position: absolute;
             top: 15px;
-            right: 20px;
+            right: 15px;
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 10px;
             background: var(--fn-panel);
-            padding: 8px 16px;
+            padding: 6px 14px;
             border-radius: 40px;
             border: 2px solid rgba(255, 230, 0, 0.35);
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
@@ -60,8 +62,8 @@
         }
 
         .avatar-img {
-            width: 38px;
-            height: 38px;
+            width: 34px;
+            height: 34px;
             border-radius: 50%;
             object-fit: cover;
             border: 2px solid var(--fn-yellow);
@@ -70,22 +72,22 @@
         .badge-vip {
             background: linear-gradient(135deg, #f59e0b, #ffe600);
             color: #000;
-            font-size: 9px;
+            font-size: 8px;
             font-weight: 900;
-            padding: 2px 6px;
+            padding: 2px 5px;
             border-radius: 4px;
         }
 
         .badge-free {
             background: #475569;
             color: #cbd5e1;
-            font-size: 9px;
+            font-size: 8px;
             font-weight: 800;
-            padding: 2px 6px;
+            padding: 2px 5px;
             border-radius: 4px;
         }
 
-        /* FORTNITE BATTLE ROYALE HUD */
+        /* FORTNITE HUD TOP */
         .hud-center {
             position: absolute;
             top: 15px;
@@ -93,9 +95,9 @@
             transform: translateX(-50%);
             display: flex;
             align-items: center;
-            gap: 24px;
+            gap: 16px;
             background: var(--fn-panel);
-            padding: 10px 26px;
+            padding: 8px 20px;
             border-radius: 35px;
             border: 2px solid var(--fn-yellow);
             box-shadow: 0 0 25px rgba(255, 230, 0, 0.25);
@@ -109,7 +111,7 @@
         }
 
         .hud-title {
-            font-size: 9px;
+            font-size: 8px;
             font-weight: 900;
             color: #94a3b8;
             letter-spacing: 1px;
@@ -118,29 +120,59 @@
 
         .hud-val {
             font-family: 'Luckiest Guy', cursive;
-            font-size: 22px;
+            font-size: 20px;
             color: var(--fn-yellow);
             text-shadow: 2px 2px 0 #000;
         }
 
-        /* SHIELD & HP */
+        /* TLAČIDLO AUTOPLAY BOT (GUI) */
+        .autoplay-btn {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            z-index: 40;
+            background: #1e293b;
+            color: #94a3b8;
+            border: 2px solid #475569;
+            padding: 8px 16px;
+            border-radius: 30px;
+            font-family: 'Luckiest Guy', cursive;
+            font-size: 14px;
+            letter-spacing: 1px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            transition: all 0.2s ease-in-out;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .autoplay-btn.active {
+            background: linear-gradient(135deg, #10b981, #00ff88);
+            color: #000;
+            border-color: #00ff88;
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.6);
+            transform: scale(1.05);
+        }
+
+        /* SHIELD & HP BARY */
         .hud-bottom-left {
             position: absolute;
-            bottom: 25px;
-            left: 25px;
+            bottom: 20px;
+            left: 20px;
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 6px;
             z-index: 20;
             background: rgba(14, 20, 36, 0.88);
-            padding: 12px 18px;
+            padding: 10px 14px;
             border-radius: 12px;
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         .bar-wrap {
-            width: 220px;
-            height: 14px;
+            width: 160px;
+            height: 12px;
             background: #1e293b;
             border-radius: 6px;
             overflow: hidden;
@@ -151,33 +183,62 @@
         .bar-fill-health { height: 100%; background: linear-gradient(90deg, #16a34a, #4ade80); transition: width .15s; }
         .bar-txt {
             position: absolute; inset: 0;
-            text-align: center; font-size: 9px; font-weight: 900; line-height: 14px;
+            text-align: center; font-size: 8px; font-weight: 900; line-height: 12px;
             text-shadow: 1px 1px 1px #000;
         }
 
-        /* KILL FEED */
-        .kill-feed {
+        /* MOBILNÉ TLAČIDLO PRE SPRINT/BOOST */
+        .mobile-boost-btn {
             position: absolute;
-            top: 80px;
-            right: 25px;
+            bottom: 30px;
+            right: 30px;
+            width: 75px;
+            height: 75px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #f59e0b, #ffe600);
+            border: 3px solid #fff;
+            color: #000;
+            font-family: 'Luckiest Guy', cursive;
+            font-size: 13px;
             display: flex;
             flex-direction: column;
-            gap: 6px;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 25px rgba(255, 230, 0, 0.5);
+            z-index: 40;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+
+        .mobile-boost-btn:active {
+            transform: scale(0.92);
+            box-shadow: 0 0 10px rgba(255, 230, 0, 0.3);
+        }
+
+        /* LIVE KILL FEED */
+        .kill-feed {
+            position: absolute;
+            top: 75px;
+            right: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
             z-index: 20;
             pointer-events: none;
+            max-width: 250px;
         }
 
         .kill-row {
             background: rgba(0, 0, 0, 0.75);
-            padding: 6px 12px;
+            padding: 5px 10px;
             border-radius: 6px;
-            font-size: 11px;
+            font-size: 10px;
             font-weight: 800;
             border-left: 4px solid #ef4444;
             animation: fadeOut 5s forwards;
         }
 
-        /* MODÁL: PRIHLÁSENIE / VEREJNÝ REGISTER ÚČTOV */
+        /* MODÁL: VEREJNÁ SIEŤ ÚČTOV */
         .modal-screen {
             position: absolute;
             inset: 0;
@@ -203,7 +264,7 @@
         }
 
         .lobby-header {
-            padding: 20px;
+            padding: 16px;
             background: #0d1424;
             border-bottom: 2px solid #233152;
             text-align: center;
@@ -211,9 +272,9 @@
 
         .lobby-header h1 {
             font-family: 'Luckiest Guy', cursive;
-            font-size: 34px;
+            font-size: 28px;
             color: var(--fn-yellow);
-            text-shadow: 3px 3px 0 #000;
+            text-shadow: 2px 2px 0 #000;
         }
 
         .lobby-content {
@@ -224,16 +285,26 @@
 
         .lobby-left {
             flex: 1;
-            padding: 24px;
+            padding: 20px;
             border-right: 2px solid #233152;
             overflow-y: auto;
         }
 
         .lobby-right {
             flex: 1.2;
-            padding: 24px;
+            padding: 20px;
             background: #0f172a;
             overflow-y: auto;
+        }
+
+        @media (max-width: 720px) {
+            .lobby-content { flex-direction: column; overflow-y: auto; }
+            .lobby-left { border-right: none; border-bottom: 2px solid #233152; }
+            .hud-center { gap: 10px; padding: 6px 14px; }
+            .hud-val { font-size: 16px; }
+            .hud-title { font-size: 7px; }
+            .bar-wrap { width: 120px; }
+            .mobile-boost-btn { width: 65px; height: 65px; font-size: 11px; bottom: 20px; right: 20px; }
         }
 
         .f-input {
@@ -241,34 +312,28 @@
             background: #0a0f1d;
             border: 2px solid #334155;
             color: #fff;
-            padding: 10px 12px;
+            padding: 10px;
             border-radius: 8px;
             font-size: 13px;
             font-weight: 700;
             outline: none;
-            margin-bottom: 12px;
+            margin-bottom: 10px;
         }
-
-        .f-input:focus { border-color: var(--fn-yellow); }
 
         .btn-yellow {
             width: 100%;
             background: var(--fn-yellow);
             color: #000;
             font-family: 'Luckiest Guy', cursive;
-            font-size: 20px;
+            font-size: 18px;
             padding: 12px;
             border-radius: 10px;
             border: none;
             cursor: pointer;
-            box-shadow: 0 5px 0 #b3a100;
+            box-shadow: 0 4px 0 #b3a100;
             transition: .1s;
         }
 
-        .btn-yellow:hover { transform: translateY(-2px); box-shadow: 0 7px 0 #b3a100; }
-        .btn-yellow:active { transform: translateY(2px); box-shadow: 0 2px 0 #b3a100; }
-
-        /* VEREJNÁ LISTINA ÚČTOV */
         .public-accounts-list {
             display: flex;
             flex-direction: column;
@@ -284,27 +349,10 @@
             padding: 8px 12px;
             border-radius: 10px;
             border: 1px solid rgba(255, 255, 255, 0.08);
-            transition: 0.2s;
         }
 
-        .public-account-card:hover {
-            border-color: var(--fn-yellow);
-            background: #27354f;
-        }
-
-        .acc-info {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .acc-avatar {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 1px solid var(--fn-yellow);
-        }
+        .acc-info { display: flex; align-items: center; gap: 8px; }
+        .acc-avatar { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; }
 
         /* VICTORY OVERLAY */
         #victory-screen {
@@ -320,7 +368,7 @@
 
         .vic-title {
             font-family: 'Luckiest Guy', cursive;
-            font-size: 70px;
+            font-size: 50px;
             color: var(--fn-yellow);
             text-shadow: 4px 5px 0 #000, 0 0 35px var(--fn-yellow);
             transform: rotate(-3deg);
@@ -339,18 +387,23 @@
 
     <canvas id="gameCanvas"></canvas>
 
+    <!-- TLAČIDLO PRE AUTOPLAY BOT (GUI) -->
+    <button id="btn-autoplay" class="autoplay-btn">
+        <span>🤖 AUTOPLAY:</span> <b id="autoplay-status">OFF</b>
+    </button>
+
     <!-- HORNÝ STATUS PRIHLÁSENÉHO HRÁČA -->
     <div class="user-top-badge" id="profile-pill" style="display:none;">
         <img id="pill-avatar" class="avatar-img" src="" alt="Avatar">
         <div style="display:flex; flex-direction:column; text-align:left;">
-            <div style="font-size:13px; font-weight:900; display:flex; align-items:center; gap:5px;">
+            <div style="font-size:12px; font-weight:900; display:flex; align-items:center; gap:4px;">
                 <span id="pill-nick">Player</span>
                 <span id="pill-tier" class="badge-free">FREE</span>
             </div>
-            <span style="font-size: 10px; color:#94a3b8;" id="pill-wins">Wins: 0</span>
+            <span style="font-size: 9px; color:#94a3b8;" id="pill-wins">Wins: 0</span>
         </div>
-        <button id="btn-buy-vip" style="background:linear-gradient(135deg, #f59e0b, #ffe600); color:#000; font-weight:900; font-size:11px; padding:6px 12px; border-radius:6px; border:none; cursor:pointer; margin-left:10px;">👑 VIP PASS</button>
-        <button id="btn-logout" style="background:transparent; border:none; color:#ef4444; font-weight:800; cursor:pointer; font-size:11px;">LOGOUT</button>
+        <button id="btn-buy-vip" style="background:linear-gradient(135deg, #f59e0b, #ffe600); color:#000; font-weight:900; font-size:10px; padding:4px 8px; border-radius:6px; border:none; cursor:pointer; margin-left:6px;">👑 VIP</button>
+        <button id="btn-logout" style="background:transparent; border:none; color:#ef4444; font-weight:800; cursor:pointer; font-size:10px;">X</button>
     </div>
 
     <!-- FORTNITE BATTLE ROYALE HUD -->
@@ -360,15 +413,15 @@
             <span class="hud-val" id="hud-alive">45</span>
         </div>
         <div class="hud-stat">
-            <span class="hud-title">ELIMINÁCIE</span>
+            <span class="hud-title">KILLS</span>
             <span class="hud-val" id="hud-kills">0</span>
         </div>
         <div class="hud-stat">
-            <span class="hud-title" style="color:#d946ef;">BÚRKA SA SŤAHUJE</span>
+            <span class="hud-title" style="color:#d946ef;">BÚRKA</span>
             <span class="hud-val" style="color:#d946ef;" id="hud-storm-timer">03:00</span>
         </div>
         <div class="hud-stat">
-            <span class="hud-title">DĹŽKA HADÍKA</span>
+            <span class="hud-title">DĹŽKA</span>
             <span class="hud-val" id="hud-len">18</span>
         </div>
     </div>
@@ -377,12 +430,18 @@
     <div class="hud-bottom-left">
         <div class="bar-wrap">
             <div class="bar-fill-shield" id="bar-shield" style="width: 100%;"></div>
-            <div class="bar-txt">SHIELD <span id="val-shield">100</span>/100</div>
+            <div class="bar-txt">SHIELD <span id="val-shield">100</span></div>
         </div>
         <div class="bar-wrap">
             <div class="bar-fill-health" id="bar-health" style="width: 100%;"></div>
-            <div class="bar-txt">ZDRAVIE <span id="val-health">100</span>/100</div>
+            <div class="bar-txt">ZDRAVIE <span id="val-health">100</span></div>
         </div>
+    </div>
+
+    <!-- MOBILNÉ SPRINT TLAČIDLO -->
+    <div class="mobile-boost-btn" id="mobile-boost-btn">
+        <span>🚀</span>
+        <span>BOOST</span>
     </div>
 
     <!-- LIVE KILL FEED -->
@@ -391,8 +450,8 @@
     <!-- VICTORY ROYALE #1 -->
     <div id="victory-screen">
         <h1 class="vic-title">#1 VICTORY ROYALE</h1>
-        <p style="font-size: 20px; font-weight: 800; margin-bottom: 25px;">Zvíťazil si ako posledný preživší v 50-hráčskej aréne!</p>
-        <button class="btn-yellow" style="max-width: 250px;" onclick="location.reload()">HRAŤ ZNOVA</button>
+        <p style="font-size: 18px; font-weight: 800; margin-bottom: 20px;">Vyhral si zápas v Snake Royale!</p>
+        <button class="btn-yellow" style="max-width: 200px;" onclick="location.reload()">HRAŤ ZNOVA</button>
     </div>
 
     <!-- MODÁL: VEREJNÁ SIEŤ ÚČTOV A ŠTART HRY -->
@@ -400,42 +459,26 @@
         <div class="lobby-box">
             <div class="lobby-header">
                 <h1>FORTNITE SNAKE ROYALE</h1>
-                <p style="font-size: 12px; color:#94a3b8; margin-top: 4px;">Globálna sieť hráčov & EMQX Cloud Databáza</p>
+                <p style="font-size: 11px; color:#94a3b8; margin-top: 2px;">Mobil & PC | Autoplay Bot | EMQX Cloud</p>
             </div>
 
             <div class="lobby-content">
-                <!-- Vytvorenie verejného účtu -->
                 <div class="lobby-left">
-                    <h3 style="font-size:14px; margin-bottom:12px; color:var(--fn-yellow);">VYTVORIŤ VEREJNÝ ÚČET</h3>
-                    <input type="text" id="reg-username" class="f-input" placeholder="Epic GamerTag (napr. Ninja_SK)">
+                    <h3 style="font-size:13px; margin-bottom:10px; color:var(--fn-yellow);">VYTVORIŤ VEREJNÝ ÚČET</h3>
+                    <input type="text" id="reg-username" class="f-input" placeholder="Epic GamerTag (napr. Pro_Snake)">
                     
-                    <div style="text-align:left; font-size:10px; color:#94a3b8; margin-bottom:4px;">PROFILOVÁ FOTKA (DO VAULT KATALÓGU):</div>
+                    <div style="font-size:10px; color:#94a3b8; margin-bottom:4px;">PROFILOVÁ FOTKA (VAULT KATALÓG):</div>
                     <input type="file" id="reg-avatar-file" class="f-input" accept="image/*">
-
-                    <div style="margin-bottom:12px;">
-                        <label style="font-size:10px; font-weight:800; color:#94a3b8;">MAPA (BIÓM):</label>
-                        <select id="map-select" class="f-input" style="margin-top:4px;">
-                            <option value="pleasant">🌳 Pleasant Meadows (Klasická Tráva)</option>
-                            <option value="desert">🏜️ Paradise Desert (Púšť & Kaňon)</option>
-                            <option value="frosty">❄️ Frosty Peaks (Zimný Ľad)</option>
-                            <option value="kevin">🔮 Kevin's Realm (Fialová Dimenzia)</option>
-                        </select>
-                    </div>
 
                     <button class="btn-yellow" id="btn-submit-register">ZAREGISTROVAŤ A HRAŤ</button>
                 </div>
 
-                <!-- Verejné Účty v Cloude -->
                 <div class="lobby-right">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <h3 style="font-size:14px; color:var(--fn-blue);">VEREJNÉ ÚČTY V CLOUDE</h3>
-                        <span id="users-count" style="font-size:11px; color:#94a3b8;">0 účtov</span>
+                        <h3 style="font-size:13px; color:var(--fn-blue);">VEREJNÉ ÚČTY V CLOUDE</h3>
+                        <span id="users-count" style="font-size:10px; color:#94a3b8;">0 účtov</span>
                     </div>
-                    <p style="font-size:11px; color:#94a3b8; margin-top:4px; margin-bottom:10px;">Klikni na účet a hraj zaň okamžite:</p>
-                    
-                    <div class="public-accounts-list" id="public-accounts-list">
-                        <!-- Generované dynamicky z users_registry -->
-                    </div>
+                    <div class="public-accounts-list" id="public-accounts-list"></div>
                 </div>
             </div>
         </div>
@@ -443,17 +486,16 @@
 
     <script>
         // =======================================================
-        // 1. EMQX CLOUD MQTT & DATABÁZOVÁ VRSTVA
+        // 1. EMQX CLOUD MQTT ARCHITEKTÚRA
         // =======================================================
         const MQTT_BROKER = "broker.emqx.io";
         const MQTT_PORT = 8084;
         const MQTT_PATH = "/mqtt";
-        const CLIENT_ID = "fn_mp_" + Math.random().toString(16).substring(2, 10);
+        const CLIENT_ID = "fn_mob_" + Math.random().toString(16).substring(2, 10);
 
-        // Perzistentné témy podľa zadania
-        const TOPIC_VAULT = "dankermax/v1/vault_catalog";     // Globálny katalóg fotografií (Base64)
-        const TOPIC_USERS = "dankermax/v1/users_registry";     // Globálna databáza verejných účtov
-        const TOPIC_REPORTS = "dankermax/v1/reports_queue";   // Queue pre admina / transakcie
+        const TOPIC_VAULT = "dankermax/v1/vault_catalog";
+        const TOPIC_USERS = "dankermax/v1/users_registry";
+        const TOPIC_REPORTS = "dankermax/v1/reports_queue";
         const TOPIC_MP_POS = "dankermax/v1/snake_game/positions/";
 
         let mqttClient = null;
@@ -478,7 +520,6 @@
                     const topic = message.destinationName;
                     const payload = JSON.parse(message.payloadString);
 
-                    // 1. Verejné účty (Users Registry)
                     if (topic === TOPIC_USERS) {
                         cloudUsersRegistry = Object.assign(cloudUsersRegistry, payload);
                         localStorage.setItem("fn_cached_registry", JSON.stringify(cloudUsersRegistry));
@@ -491,12 +532,10 @@
                         }
                     }
 
-                    // 2. Vault katalóg fotografií
                     if (topic === TOPIC_VAULT) {
                         cloudVaultCatalog = payload;
                     }
 
-                    // 3. Živý multiplayer ostatných hráčov
                     if (topic.startsWith(TOPIC_MP_POS)) {
                         const sender = topic.split("/").pop();
                         if (currentUser && sender !== currentUser.username && payload.alive) {
@@ -517,16 +556,12 @@
                     mqttClient.subscribe(TOPIC_VAULT, { qos: 1 });
                     mqttClient.subscribe(TOPIC_MP_POS + "+", { qos: 0 });
 
-                    // Auto-prihlásenie ak existuje session
-                    if (currentUser) {
-                        applyLogin(currentUser);
-                    }
+                    if (currentUser) applyLogin(currentUser);
                 },
                 onFailure: () => setTimeout(connectMQTT, 4000)
             });
         }
 
-        // Zápis do perzistentnej databázy verejných účtov (retained = true)
         function pushUserRegistryToCloud() {
             if (!isMqttConnected) return;
             const msg = new Paho.MQTT.Message(JSON.stringify(cloudUsersRegistry));
@@ -536,7 +571,6 @@
             mqttClient.send(msg);
         }
 
-        // Zápis do Vault Katalógu (retained = true)
         function pushPhotoToVaultCatalog(photoObj) {
             if (!isMqttConnected) return;
             cloudVaultCatalog.push(photoObj);
@@ -547,7 +581,6 @@
             mqttClient.send(msg);
         }
 
-        // Zápis do Reports Queue
         function pushReportToQueue(action, details) {
             if (!isMqttConnected) return;
             const report = {
@@ -564,15 +597,15 @@
         }
 
         // =======================================================
-        // 2. VEREJNÉ ÚČTY V LOBBY (UI & REGISTRÁCIA)
+        // 2. VEREJNÉ ÚČTY UI
         // =======================================================
         function renderPublicAccountsList() {
             const list = document.getElementById("public-accounts-list");
             const keys = Object.keys(cloudUsersRegistry);
-            document.getElementById("users-count").innerText = `${keys.length} verejných účtov`;
+            document.getElementById("users-count").innerText = `${keys.length} účtov`;
 
             if (keys.length === 0) {
-                list.innerHTML = `<div style="font-size:11px; color:#64748b; padding:10px;">Zatiaľ nie sú registrované žiadne účty. Buď prvý!</div>`;
+                list.innerHTML = `<div style="font-size:11px; color:#64748b;">Žiadne účty. Vytvor si prvý!</div>`;
                 return;
             }
 
@@ -583,14 +616,14 @@
                         <div class="acc-info">
                             <img src="${u.avatar || DEFAULT_AVATAR}" class="acc-avatar">
                             <div>
-                                <div style="font-size:12px; font-weight:800;">
+                                <div style="font-size:11px; font-weight:800;">
                                     ${u.username} 
                                     ${u.tier === 'premium' ? '<span class="badge-vip">VIP</span>' : '<span class="badge-free">FREE</span>'}
                                 </div>
-                                <div style="font-size:10px; color:#94a3b8;">Výhry: <b>${u.wins || 0}</b> | Eliminácie: <b>${u.kills || 0}</b></div>
+                                <div style="font-size:9px; color:#94a3b8;">Výhry: <b>${u.wins || 0}</b></div>
                             </div>
                         </div>
-                        <button onclick="selectPublicAccount('${u.username}')" style="background:var(--fn-blue); border:none; color:#000; font-weight:900; font-size:10px; padding:5px 10px; border-radius:6px; cursor:pointer;">HRAŤ</button>
+                        <button onclick="selectPublicAccount('${u.username}')" style="background:var(--fn-blue); border:none; color:#000; font-weight:900; font-size:10px; padding:5px 8px; border-radius:6px; cursor:pointer;">HRAŤ</button>
                     </div>
                 `;
             }).join('');
@@ -608,15 +641,8 @@
             const username = document.getElementById("reg-username").value.trim();
             const avatarFile = document.getElementById("reg-avatar-file").files[0];
 
-            if (!username) {
-                alert("Zadaj svoje Epic Meno!");
-                return;
-            }
-
-            if (cloudUsersRegistry[username]) {
-                alert("Tento účet už existuje! Môžeš naň rovno kliknúť vo verejnom zozname.");
-                return;
-            }
+            if (!username) { alert("Zadaj Epic GamerTag!"); return; }
+            if (cloudUsersRegistry[username]) { alert("Tento účet už existuje!"); return; }
 
             if (avatarFile) {
                 const reader = new FileReader();
@@ -638,7 +664,6 @@
                 createdAt: new Date().toISOString()
             };
 
-            // Uloženie do perzistentného vault_catalog
             pushPhotoToVaultCatalog({
                 id: "IMG_" + Date.now(),
                 name: username + "_avatar",
@@ -647,7 +672,6 @@
                 timestamp: Date.now()
             });
 
-            // Uloženie do perzistentnej verejnej databázy účtov
             cloudUsersRegistry[username] = newUser;
             pushUserRegistryToCloud();
             pushReportToQueue("USER_REGISTERED", { username: username });
@@ -680,7 +704,7 @@
 
             if (currentUser.tier === "premium") {
                 tierSpan.className = "badge-vip";
-                tierSpan.innerText = "VIP PASS";
+                tierSpan.innerText = "VIP";
                 btnVip.style.display = "none";
             } else {
                 tierSpan.className = "badge-free";
@@ -706,7 +730,76 @@
         };
 
         // =======================================================
-        // 3. HRA, MULTIPLAYER & 35+ BOTOV
+        // 3. AUTOPLAY BOT LOGIKA (GUI TRIGGER)
+        // =======================================================
+        let isAutoplay = false;
+        const btnAutoplay = document.getElementById("btn-autoplay");
+        const autoplayStatus = document.getElementById("autoplay-status");
+
+        btnAutoplay.addEventListener("click", () => {
+            isAutoplay = !isAutoplay;
+            if (isAutoplay) {
+                btnAutoplay.classList.add("active");
+                autoplayStatus.innerText = "ON (AKTÍVNY)";
+                addKillFeed("AUTOPLAY", "Umelá inteligencia riadi hadíka!");
+            } else {
+                btnAutoplay.classList.remove("active");
+                autoplayStatus.innerText = "OFF";
+            }
+        });
+
+        // AI funkcia pre Autoplay Bota
+        function runAutoplayAI() {
+            if (!isAutoplay || !player.alive) return;
+
+            // 1. Priorita: Vyhnutie sa búrke
+            let distFromStormCenter = Math.hypot(player.x - storm.x, player.y - storm.y);
+            if (distFromStormCenter > storm.radius * 0.72) {
+                // Rýchlo nasmerovať do stredu bezpečnej zóny
+                player.angle = Math.atan2(storm.y - player.y, storm.x - player.x);
+                isBoosting = true;
+                return;
+            }
+
+            // 2. Priorita: Vyhľadanie najlepšieho lootu (Drop, Slurp, alebo XP)
+            let targetLoot = null;
+            let minDist = 999999;
+
+            for (let loot of lootItems) {
+                let d = Math.hypot(player.x - loot.x, player.y - loot.y);
+                // Uprednostniť Supply Drop a Slurp
+                let weight = (loot.type === "drop") ? 0.3 : (loot.type === "slurp" ? 0.6 : 1.0);
+                let scoreDist = d * weight;
+
+                if (scoreDist < minDist) {
+                    minDist = scoreDist;
+                    targetLoot = loot;
+                }
+            }
+
+            if (targetLoot) {
+                player.angle = Math.atan2(targetLoot.y - player.y, targetLoot.x - player.x);
+            }
+
+            // 3. Priorita: Vyhýbanie sa veľkým botom
+            for (let b of bots) {
+                if (b.alive) {
+                    let dB = Math.hypot(player.x - b.x, player.y - b.y);
+                    if (dB < 160 && b.length > player.length) {
+                        // Únik v opačnom smere!
+                        player.angle = Math.atan2(player.y - b.y, player.x - b.x);
+                        isBoosting = true;
+                        return;
+                    }
+                }
+            }
+
+            // Šetrenie štítu, boost len občas
+            isBoosting = (minDist < 120 && targetLoot && targetLoot.type === "drop");
+        }
+
+        // =======================================================
+        // 4. MOBILNÉ & PC OVLÁDANIE
         // =======================================================
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
@@ -718,10 +811,69 @@
         window.addEventListener("resize", resize);
         resize();
 
-        const WORLD_SIZE = 4500; // Väčšia mapa pre 50 hráčov
-        let gameRunning = false;
-        let isBoosting = false;
         let mousePos = { x: canvas.width / 2, y: canvas.height / 2 };
+        let isBoosting = false;
+
+        // PC Ovládanie myšou a klávesnicou
+        window.addEventListener("mousemove", (e) => {
+            if (!isAutoplay) {
+                mousePos.x = e.clientX;
+                mousePos.y = e.clientY;
+            }
+        });
+        window.addEventListener("mousedown", (e) => {
+            if (e.button === 0 && !isAutoplay) isBoosting = true;
+        });
+        window.addEventListener("mouseup", (e) => {
+            if (e.button === 0 && !isAutoplay) isBoosting = false;
+        });
+        window.addEventListener("keydown", (e) => {
+            if (e.code === "Space" && !isAutoplay) isBoosting = true;
+        });
+        window.addEventListener("keyup", (e) => {
+            if (e.code === "Space" && !isAutoplay) isBoosting = false;
+        });
+
+        // MOBILNÉ DOTYKOVÉ OVLÁDANIE (TOUCH DRAG)
+        function handleTouch(e) {
+            if (isAutoplay) isAutoplay = false; // Dotyk hráča zruší autoplay
+            btnAutoplay.classList.remove("active");
+            autoplayStatus.innerText = "OFF";
+
+            if (e.touches.length > 0) {
+                const touch = e.touches[0];
+                // Zameranie smeru od stredu obrazovky
+                mousePos.x = touch.clientX;
+                mousePos.y = touch.clientY;
+            }
+        }
+
+        canvas.addEventListener("touchstart", (e) => { e.preventDefault(); handleTouch(e); }, { passive: false });
+        canvas.addEventListener("touchmove", (e) => { e.preventDefault(); handleTouch(e); }, { passive: false });
+
+        // Mobilné tlačidlo BOOST
+        const mobileBoostBtn = document.getElementById("mobile-boost-btn");
+        mobileBoostBtn.addEventListener("touchstart", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            isBoosting = true;
+        }, { passive: false });
+
+        mobileBoostBtn.addEventListener("touchend", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            isBoosting = false;
+        }, { passive: false });
+
+        // Podpora pre kliknutie na boost tlačidlo myšou
+        mobileBoostBtn.addEventListener("mousedown", (e) => { e.stopPropagation(); isBoosting = true; });
+        mobileBoostBtn.addEventListener("mouseup", (e) => { e.stopPropagation(); isBoosting = false; });
+
+        // =======================================================
+        // 5. HERNÁ MECHANIKA (35+ BOTOV, RAST, BÚRKA)
+        // =======================================================
+        const WORLD_SIZE = 4500;
+        let gameRunning = false;
 
         let storm = {
             x: WORLD_SIZE / 2,
@@ -742,7 +894,7 @@
             shield: 100,
             kills: 0,
             history: [],
-            length: 18, // RASTIE KAŽDÝM JEDLOM
+            length: 18,
             nick: "Player",
             color: "#22c55e",
             alive: true
@@ -751,7 +903,6 @@
         let remoteSnakes = {};
         let bots = [];
 
-        // 35+ Autentických Fortnite botov
         const BOT_NAMES = [
             "Peely_Banana🍌", "Jonesy_OG", "Midas_Gold👑", "Renegade_Raider",
             "Fishstick_🐟", "Dark_Voyager", "Slurp_Boi", "Raven_X",
@@ -765,7 +916,6 @@
         ];
         const BOT_COLORS = ["#ef4444", "#3b82f6", "#a855f7", "#ec4899", "#14b8a6", "#f97316", "#84cc16", "#e11d48"];
 
-        // Loot Orby (Potrava pre rast)
         let lootItems = [];
         for (let i = 0; i < 400; i++) spawnLootItem();
 
@@ -779,7 +929,6 @@
             });
         }
 
-        // Supply Drops bedne
         for (let i = 0; i < 8; i++) {
             lootItems.push({ x: Math.random() * WORLD_SIZE, y: Math.random() * WORLD_SIZE, type: "drop", radius: 18 });
         }
@@ -803,12 +952,6 @@
             }
         }
 
-        window.addEventListener("mousemove", (e) => { mousePos.x = e.clientX; mousePos.y = e.clientY; });
-        window.addEventListener("mousedown", (e) => { if (e.button === 0) isBoosting = true; });
-        window.addEventListener("mouseup", (e) => { if (e.button === 0) isBoosting = false; });
-        window.addEventListener("keydown", (e) => { if (e.code === "Space") isBoosting = true; });
-        window.addEventListener("keyup", (e) => { if (e.code === "Space") isBoosting = false; });
-
         function addKillFeed(killer, victim) {
             const feed = document.getElementById("kill-feed");
             const div = document.createElement("div");
@@ -826,6 +969,11 @@
         let lastMqttSend = 0;
         function update() {
             if (!gameRunning) return;
+
+            // Spustenie Autoplay AI ak je zapnutý
+            if (isAutoplay) {
+                runAutoplayAI();
+            }
 
             // Búrka
             if (storm.radius > 180) storm.radius -= storm.shrinkRate;
@@ -846,9 +994,11 @@
 
             // Pohyb hráča
             if (player.alive) {
-                let dx = mousePos.x - canvas.width / 2;
-                let dy = mousePos.y - canvas.height / 2;
-                player.angle = Math.atan2(dy, dx);
+                if (!isAutoplay) {
+                    let dx = mousePos.x - canvas.width / 2;
+                    let dy = mousePos.y - canvas.height / 2;
+                    player.angle = Math.atan2(dy, dx);
+                }
 
                 let curSpeed = player.speed;
                 if (isBoosting && (player.shield > 0 || player.length > 15)) {
@@ -872,11 +1022,11 @@
                         if (loot.type === "slurp") {
                             player.shield = Math.min(100, player.shield + 25);
                         } else if (loot.type === "drop") {
-                            player.length += 8; // RAST O 8 ČLÁNKOV
+                            player.length += 8;
                             player.shield = 100;
                             player.health = 100;
                         } else {
-                            player.length += 1; // RAST O 1 ČLÁNOK ZA KAŽDÉ JEDLO
+                            player.length += 1; // Rast o 1 článok
                         }
                         lootItems.splice(i, 1);
                         spawnLootItem();
@@ -908,7 +1058,7 @@
                 b.history.unshift({ x: b.x, y: b.y });
                 if (b.history.length > b.length * 5) b.history.pop();
 
-                // Súboj s botom
+                // Súboj
                 if (player.alive && Math.hypot(player.x - b.x, player.y - b.y) < player.radius + b.radius) {
                     if (player.length >= b.length) {
                         b.alive = false;
@@ -927,7 +1077,7 @@
                 }
             });
 
-            // Multiplayer kolízia so živými hráčmi (Ak narazíš hlavou do ich tela, zomrieš)
+            // Multiplayer kolízia so živými hráčmi
             for (let id in remoteSnakes) {
                 let rp = remoteSnakes[id];
                 if (player.alive && rp.body) {
@@ -940,7 +1090,7 @@
                 }
             }
 
-            // Odosielanie polohy celého tela cez MQTT (Multiplayer broadcast)
+            // Odosielanie polohy cez EMQX Cloud MQTT
             if (isMqttConnected && currentUser && Date.now() - lastMqttSend > 90) {
                 lastMqttSend = Date.now();
                 const sampledBody = player.history.filter((_, idx) => idx % 4 === 0).slice(0, 30);
@@ -959,7 +1109,7 @@
                 mqttClient.send(msg);
             }
 
-            // HUD počítadlá
+            // HUD
             let aliveCount = (player.alive ? 1 : 0) + bots.filter(b => b.alive).length + Object.keys(remoteSnakes).length;
             document.getElementById("hud-alive").innerText = aliveCount;
             document.getElementById("hud-kills").innerText = player.kills;
@@ -993,7 +1143,7 @@
         }
 
         // =======================================================
-        // 4. VYKRESLOVANIE (RENDER MAPY, BOTOV & MULTIPLAYERU)
+        // 6. RENDER (CANVAS)
         // =======================================================
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -1004,11 +1154,9 @@
             ctx.save();
             ctx.translate(-camX, -camY);
 
-            // Podklad arény
             ctx.fillStyle = "#0c1220";
             ctx.fillRect(0, 0, WORLD_SIZE, WORLD_SIZE);
 
-            // Fortnite grid
             ctx.strokeStyle = "#162035";
             ctx.lineWidth = 2;
             for (let x = 0; x <= WORLD_SIZE; x += 100) {
@@ -1018,7 +1166,6 @@
                 ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(WORLD_SIZE, y); ctx.stroke();
             }
 
-            // Loot orby
             lootItems.forEach(l => {
                 if (l.type === "drop") {
                     ctx.fillStyle = "#0284c7";
@@ -1034,12 +1181,10 @@
                 }
             });
 
-            // Vykreslenie všetkých 35+ botov
             bots.forEach(b => {
                 if (b.alive) renderSnake(b.history, b.radius, b.color, b.nick, false);
             });
 
-            // Vykreslenie živých online spoluhráčov (Multiplayer)
             for (let id in remoteSnakes) {
                 let rp = remoteSnakes[id];
                 if (rp.body && rp.body.length > 0) {
@@ -1047,9 +1192,8 @@
                 }
             }
 
-            // Lokálny hráč
             if (player.alive) {
-                renderSnake(player.history, player.radius, player.color, player.nick, currentUser && currentUser.tier === "premium");
+                renderSnake(player.history, player.radius, player.color, (isAutoplay ? "🤖 " : "") + player.nick, currentUser && currentUser.tier === "premium");
             }
 
             // Búrka (Storm)
@@ -1090,9 +1234,9 @@
             ctx.fill();
 
             ctx.fillStyle = "#fff";
-            ctx.font = "900 12px Montserrat";
+            ctx.font = "900 11px Montserrat";
             ctx.textAlign = "center";
-            ctx.fillText((isVip ? "👑 " : "") + nick, head.x, head.y - 20);
+            ctx.fillText((isVip ? "👑 " : "") + nick, head.x, head.y - 18);
         }
 
         function loop() {
